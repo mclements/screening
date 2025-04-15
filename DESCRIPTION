@@ -1,0 +1,12 @@
+Package: screening
+Type: Package
+Title: Various models for cancer screening
+Version: 1.0
+Author: Mark Clements
+Maintainer: Mark Clements <mark.clements@ki.se>
+Description: One paragraph description of what the package does as one or more
+         full sentences.
+License: GPL (>= 2)
+Imports: Rcpp (>= 1.0.13)
+LinkingTo: Rcpp, BH
+RoxygenNote: 7.3.2
