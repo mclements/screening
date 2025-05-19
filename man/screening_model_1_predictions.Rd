@@ -5,16 +5,20 @@
 \title{Do predictions for ScreeningModel1}
 \usage{
 screening_model_1_predictions(
-  time,
+  t,
   tj,
   shape1 = 1,
   scale1 = 1,
   shape2 = 1,
   scale2 = 1,
-  beta = 0.05
+  beta = 0.05,
+  tol = 1e-06,
+  simple = TRUE
 )
 }
 \arguments{
+\item{t}{double vector of times to evaluate}
+
 \item{tj}{double vector of screening times}
 
 \item{scale1}{Weibull scale for onset}
@@ -25,12 +29,14 @@ screening_model_1_predictions(
 
 \item{beta}{false negative fraction for screening}
 
-\item{t}{double vector of times to evaluate}
+\item{tol}{double for the numeric tolerance of the integration (default=1e-6)}
+
+\item{simple}{whether to calculate Z using a simple method (complement) or integration (defaults to true)}
 
 \item{shape}{Weibull shape for onset}
 }
 \value{
-data-frame with elements time, X, Y, Z (for state probabilities) and I (for incidence)
+data-frame with elements t, X, Y, Z (for state probabilities) and I (for incidence)
 }
 \description{
 Do predictions for ScreeningModel1

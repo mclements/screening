@@ -1,13 +1,423 @@
 
 
 
-#+begin_src R :session *R* :results output :exports both
+#+begin_src R :session *R:screening* :results output :exports both
   library(screening)
-  par(mfrow=1:2)
   x=seq(0,30,length=301)
-  screening_model_1_predictions(t=x, tj=vector("double"), shape1=1.5, shape2=1.5, scale1=20, scale2=10, beta=0.4) |>
-      with(matplot(time,cbind(X,Y,Z),type="l", lty=1, main="No screening"))
-  screening_model_1_predictions(t=x, tj=c(10,15, 20, 25), shape1=1.5, shape2=1.5, scale1=20, scale2=10, beta=0.4) |>
-      with(matplot(time,cbind(X,Y,Z),type="l", lty=1, main="Screening"))
+  pred =
+      screening_model_1_predictions(t=x, tj=numeric(), shape1=1.5, scale1=20,
+                                    shape2=1.5, scale2=10, beta=0.4, simple=TRUE,
+                                    tol=1e-6)
+  pred_check =
+      screening_model_1_predictions(t=x, tj=numeric(), shape1=1.5,
+                                    scale1=20, shape2=1.5, scale2=10, beta=0.4,
+                                    simple=FALSE, tol=1e-6)
+  with(pred_check, 1-(X+Y+Z)) |> range()
+  
+  par(mfrow=1:2)
+  with(pred,
+       matplot(t,cbind(X,Y,Z),type="l", lty=1, main="No screening",
+               xlab="Time", ylab="Proportion"))
+  screening_model_1_predictions(t=x, tj=c(10,15, 20, 25), shape1=1.5, shape2=1.5,
+                                scale1=20, scale2=10, beta=0.4) |>
+      with(matplot(t,cbind(X,Y,Z),type="l", lty=1, main="Screening",
+                   xlab="Time", ylab="Proportion"))
+  legend("topright", legend=c("X","Y","Z"), lty=1, col=1:3)
+
+  par(mfrow=c(1,1))
+  with(pred,
+       matplot(t,cbind(X,Y,Z),type="l", lty=1, 
+               xlab="Time", ylab="Proportion"))
+  screening_model_1_predictions(t=x, tj=c(10,15, 20, 25), shape1=1.5, shape2=1.5,
+                                scale1=20, scale2=10, beta=0.4) |>
+      with(matlines(t,cbind(X,Y,Z),type="l", lty=2, col=1:3))
+  legend("topright",
+         legend=c("X (unscreened)","Y (unscreened)","Z (unscreened)",
+                  "X (screened)","Y (screened)","Z (screened)"),
+         lty=rep(1:2,each=3), col=rep(1:3,l=6))
+
+  
+#+end_src
+
+#+RESULTS:
+
+
+#+begin_src R :session *R:screening* :results output :exports both
+
+  library(Rcpp)
+  sourceCpp(code="
+  #include <R.h>
+  #include <vector>
+  #include <algorithm>
+  class FindInterval {
+  public:
+    std::vector<double> s;
+    int ilo, mflag;
+    FindInterval(std::vector<double> s) : s(s), ilo(1) {}
+    int operator()(double x) {
+      ilo = findInterval(&s[0], s.size(), x, FALSE, FALSE, ilo, &mflag);
+      return ilo==0 ? 0 : ilo-1;
+    }
+  };
+  // [[Rcpp::export]]
+  std::vector<size_t> test_findInterval(std::vector<double> s, std::vector<double> xs) {
+    std::vector<size_t> is(xs.size());
+    FindInterval x_axis(s);
+    std::transform(xs.begin(), xs.end(), is.begin(), [&](double x) {return x_axis(x); });
+    return is;
+  }")
+  x = c(0,1,1.1,2,3,3.1,4,5,5.1)
+  brk = seq(0,100,len=101)
+  data.frame(x,i=test_findInterval(brk,x)) # ok
+  ##
+  system.time(test_findInterval(brk,seq(0,5,len=1e6)))
+  system.time(test_findInterval(brk,runif(1e6,0,5)))
+  
+  
+#+end_src
+
+
+** Prevalence modelling
+
+Following Verdecchia et al (1989), we can re-formulate Equation (4) as
+
+\begin{align*}
+  v(0) &= 0 \\
+  v(x,0) &= 0 \\
+  \frac{d v(x,\tau)}{d\tau} &= (1-v(\tau))\mu(\tau) \exp\left(-\int_\tau^x (\beta(u,\tau)-\alpha(u)) du\right) \\
+  \frac{d v(\tau)}{d\tau} &= (1-v(\tau))\mu(\tau) -\beta(u,\tau)-\alpha(u) \\
+  v(x) &= v(x,x)
+\end{align*}
+
+
+#+begin_src R :session *R:screening* :results output :exports both
+
+  ## Volterra integral equations of the second kind
+  RR = 2
+  mu = 0.05*RR # incidence
+  beta = 0.1*RR # mortality from the cancer state
+  alpha = 0.02*RR # general mortality
+  t = seq(0,30,length=31)
+  delta = t[2]-t[1]
+  v[2] = mu/(mu+beta-alpha)*(1-exp(-(mu+beta-alpha)*delta)) # numerically accurate
+  for (j in 3:length(t)) {
+      index = 1:(j-1)
+      du = (j-index-0.5)*delta
+      v[j] = sum((1-v[index])*mu*delta*exp(-(beta-alpha)*du))
+  }
+  plot(t,v,type="l")
+  v2 = mu/(mu+beta-alpha)*(1-exp(-(mu+beta-alpha)*t))
+  lines(t,v2,col="red")
+
+  plot(t,v-v2,type="l")
+
+
+#+end_src
+
+
+#+begin_src R :session *R:screening* :results output :exports both
+
+  ## Volterra integral equation of the second kind
+  RR = 2
+  mu = \(t) 0.05*RR+t*0 # incidence
+  beta = \(t,u) 0.1*RR+t*0 # mortality from the cancer state
+  alpha = \(t) 0.02*RR+t*0 # general mortality
+  t = seq(0,30,length=301)
+  delta = t[2]-t[1]
+  v = t*0
+  v[2] = mu(delta/2)/(mu(delta/2)+beta(delta/2)-alpha(delta/2))*
+      (1-exp(-(mu(delta/2)+beta(delta/2,delta/2)-alpha(delta/2))*delta))
+  for (j in 3:length(t)) {
+      index = 1:(j-1)
+      inner = sapply(index, function(k) {
+          index2 = k:(j-1)
+          u = t[index2]+delta/2
+          ## w = if (length(u)>1) c(1/2,rep(1,length(u)-2), 1/2) else c(1/2,1/2)
+          w = c(1/2,rep(1,length(u)-1))
+          sum(w*delta*(beta(u,u[1])-alpha(u)))
+      })
+      v[j] = sum((1-v[index])*mu(t[index]+delta/2)*delta*exp(-inner))
+  }
+  plot(t,v,type="l")
+  v2 = mu(0)/(mu(0)+beta(0)-alpha(0))*(1-exp(-(mu(0)+beta(0)-alpha(0))*t))
+  lines(t,v2,col="red")
+
+  plot(t,v-v2,type="l")
+
+#+end_src
+
+
+#+begin_src R :session *R:screening* :results output :exports both
+
+library(survival)
+
+# Example dataset
+data(lung)
+lung <- na.omit(lung)
+
+# Fit Cox model
+fit <- coxph(Surv(time, status) ~ age + sex, data = lung)
+
+# Covariate patterns as data frames
+z1 <- data.frame(age = 60, sex = 1)  # male
+z2 <- data.frame(age = 70, sex = 2)  # female
+
+# Time of interest
+t0 <- 300
+
+# Get survival predictions
+sf <- survfit(fit, newdata = rbind(z1, z2))
+
+# Find survival and std. error at time t0
+summary_sf <- summary(sf, times = t0)
+
+S1 <- summary_sf$surv[1]
+S2 <- summary_sf$surv[2]
+se1 <- summary_sf$std.err[1]
+se2 <- summary_sf$std.err[2]
+
+# Extract estimated coefficients and their variance-covariance matrix
+beta_hat <- coef(fit)
+vcov_beta <- vcov(fit)
+
+# Estimate cumulative baseline hazard at time t0
+basehaz_df <- basehaz(fit, centered = FALSE)
+Lambda0_t <- approx(basehaz_df$time, basehaz_df$hazard, xout = t0, rule = 2)$y
+
+# Compute linear predictors and exp() versions
+lp1 <- as.numeric(sum(z1 * beta_hat))
+lp2 <- as.numeric(sum(z2 * beta_hat))
+
+exp_lp1 <- exp(lp1)
+exp_lp2 <- exp(lp2)
+
+# Compute survival estimates explicitly
+S1_hat <- exp(-Lambda0_t * exp_lp1)
+S2_hat <- exp(-Lambda0_t * exp_lp2)
+
+# Compute gradients of S1 and S2 w.r.t. beta (for delta method)
+grad1 <- -Lambda0_t * exp_lp1 * S1_hat * as.numeric(z1)
+grad2 <- -Lambda0_t * exp_lp2 * S2_hat * as.numeric(z2)
+
+# Estimate Var(S1), Var(S2), and Cov(S1, S2)
+var_S1 <- t(grad1) %*% vcov_beta %*% grad1
+var_S2 <- t(grad2) %*% vcov_beta %*% grad2
+cov_S1_S2 <- t(grad1) %*% vcov_beta %*% grad2
+
+# Variance and SE of the difference
+var_diff <- var_S1 + var_S2 - 2 * cov_S1_S2
+se_diff <- sqrt(var_diff)
+
+# Output
+cat("Estimated survival difference (S1 - S2):", S1_hat - S2_hat, "\n")
+cat("Standard error of difference:", se_diff, "\n")
+
+## Compare using the bootstrap??
+
+
+
+
+# Load necessary libraries
+library(survival)
+
+# Example dataset (Lung cancer data)
+lung <- na.omit(lung)
+
+# Fit Cox model
+fit <- coxph(Surv(time, status) ~ age + sex, data = lung)
+
+# Define the covariate patterns for two groups (z1 and z2)
+z1 <- c(age = 60, sex = 1)  # male
+z2 <- c(age = 70, sex = 2)  # female
+
+# Time of interest (t0)
+t0 <- 300
+
+# Get survival estimates at time t0 for both covariate patterns
+sf <- survfit(fit, newdata = rbind(do.call(data.frame,as.list(z1)),
+                                   do.call(data.frame,as.list(z1))))
+summary_sf <- summary(sf, times = t0)
+S1 <- summary_sf$surv[1]
+S2 <- summary_sf$surv[2]
+
+# Compute the linear predictors for both patterns
+lp1 <- as.numeric(sum(z1 * coef(fit)))
+lp2 <- as.numeric(sum(z2 * coef(fit)))
+
+# Baseline cumulative hazard at time t0
+basehaz_df <- basehaz(fit, centered = FALSE)
+Lambda0_t <- approx(basehaz_df$time, basehaz_df$hazard, xout = t0, rule = 2)$y
+
+# Survival estimates at t0 using the formula: S(t0) = exp(-Lambda0(t0) * exp(lp))
+S1_hat <- exp(-Lambda0_t * exp(lp1))
+S2_hat <- exp(-Lambda0_t * exp(lp2))
+
+# Get the dfbeta residuals (influence functions) from the Cox model
+dfbeta_matrix <- residuals(fit, type = "dfbeta")
+
+# Compute gradients of S1 and S2 w.r.t. beta (for delta method)
+grad1 <- -Lambda0_t * exp(lp1) * S1_hat * as.numeric(z1)
+grad2 <- -Lambda0_t * exp(lp2) * S2_hat * as.numeric(z2)
+
+# Compute projections of dfbeta influence vectors onto the gradients
+infl_S1 <- dfbeta_matrix %*% grad1
+infl_S2 <- dfbeta_matrix %*% grad2
+
+# Variance and covariance of the influence contributions
+var_S1 <- sum(infl_S1^2)
+var_S2 <- sum(infl_S2^2)
+cov_S1_S2 <- sum(infl_S1 * infl_S2)
+
+# Variance of the survival difference
+var_diff <- var_S1 + var_S2 - 2 * cov_S1_S2
+se_diff <- sqrt(var_diff)
+
+# Output
+cat("Estimated survival difference (S1 - S2):", S1_hat - S2_hat, "\n")
+cat("Standard error of the difference:", se_diff, "\n")
+
+
+## imagine an stpm3 fit
+coef = c(intercept=1,slope=2)
+vcov = matrix(c(1,2,2,4),2)
+
+library(mvtnorm)
+set.seed(12345)
+coef_star = rmvnorm(1000, mean=coef, sigma=vcov)
+
+head(coef_star)
+
+#+end_src
+
+
+#+begin_src R :session *R:screening* :results output :exports both
+  library(splines2)
+  library(Rcpp)
+  sourceCpp(code="
+  // [[Rcpp::depends(RcppArmadillo)]]
+  // [[Rcpp::depends(splines2)]]
+  #include \"splines2Armadillo.h\"
+  // [[Rcpp::export]]
+  arma::mat test_NaturalSpline(arma::vec x, arma::vec iknots, arma::vec bknots) {
+      splines2::NaturalSpline s(x,iknots,bknots);
+      return s.basis(false);
+  }
+  ")
+
+  test_NaturalSpline(1:10, c(3,5), c(2,9)) -
+      naturalSpline(1:10, knots=c(3,5), Boundary.knots = c(2,9))
+  
+#+end_src
+
+
+#+begin_src R :session *R:screening* :results output :exports both
+  library(splines2)
+  library(Rcpp)
+  sourceCpp(code="
+  // [[Rcpp::depends(RcppArmadillo)]]
+  // [[Rcpp::depends(splines2)]]
+  // [[Rcpp::depends(TMB)]]
+  #include \"splines2Armadillo.h\"
+  // [[Rcpp::export]]
+  arma::mat test_NaturalSpline(arma::vec x, arma::vec iknots, arma::vec bknots) {
+      splines2::NaturalSpline s(x,iknots,bknots);
+      return s.basis(false);
+  }
+  ")
+
+  test_NaturalSpline(1:10, c(3,5), c(2,9)) -
+      naturalSpline(1:10, knots=c(3,5), Boundary.knots = c(2,9))
+  
+#+end_src
+
+#+begin_src maxima
+
+  H : exp(eta(beta,log(t)));
+  h : diff(H, t);
+
+#+end_src
+
+
+
+#+begin_src R :session *R:screening* :results output :exports both
+
+  library(rstpm2)
+  
+  qs = with(brcancer, quantile(log(rectime[censrec==1]), (0:3)/3))
+  X = with(brcancer,
+           model.matrix(~hormon+nsx(log(rectime), knots=qs[2:3],
+                                    Boundary.knots=range(qs))))
+  XD = with(brcancer,
+            model.matrix(~hormon+nsxD(log(rectime), knots=qs[2:3],
+                                      Boundary.knots=range(qs))))
+  XD[,1:2] = 0
+  negll = function(beta) {
+      with(brcancer, {
+          eta = X %*% beta
+          H = exp(eta)
+          h = pmax(1e-10,H * (XD %*% beta)/rectime)
+          -sum((censrec==1)*log(h) - H)
+      })
+  }
+
+  fit = stpm2(Surv(rectime, censrec) ~ hormon, data=brcancer, df=3)
+  
+  optim(coef(fit)*0, negll, control=list(reltol=1e-10, abstol=1e-10,maxit=1000))
+  coef(fit)
+  
+#+end_src
+
+
+
+#+begin_src R :session *R:screening* :results output :exports both
+
+  library(RTMB)
+  library(rstpm2)
+
+  qs = with(brcancer, quantile(log(rectime[censrec==1]), (0:3)/3))
+  X = with(brcancer,
+           model.matrix(~hormon+nsx(log(rectime), knots=qs[2:3],
+                                    Boundary.knots=range(qs))))
+  XD = with(brcancer,
+            model.matrix(~hormon+nsxD(log(rectime), knots=qs[2:3],
+                                      Boundary.knots=range(qs))))
+  XD[,1:2] = 0
+
+  softplus = function(x, epsilon=1e-8)
+      epsilon * log1p(exp(x / epsilon))
+  test_values = 10^(2:(-5))
+  softplus(test_values,1e-5) - test_values
+
+
+  softplus = function(x)
+      log1p(exp(-abs(x))) + (x+abs(x))/2
+  test_values = c(-10^(2:(-5)), 0, 10^((-5):2))
+  softplus(test_values) - test_values
+  softplus(0.1)=0.7443967
+  
+  test_values = seq(-1,1,len=201)
+  plot(test_values,softplus(test_values),type="l")
+  
+  pmax0 = function(x) (x+abs(x))/2
+  
+  softpmax = function(x,limit=1e-8,epsilon=1e-6)
+      limit+epsilon*log1p(exp(-abs(x-limit)/epsilon)) + (x-limit+abs(x-limit))/2
+  negll = function(parameters)
+      with(parameters, {
+               eta = X %*% beta
+               H = exp(eta)
+               h = softpmax(H * (XD %*% beta)/brcancer$rectime, 1e-10)
+               -sum((brcancer$censrec==1)*log(h) - H)
+      })
+  
+  fit = stpm2(Surv(rectime, censrec) ~ hormon, data=brcancer, df=3)
+  negll(list(beta=coef(fit)))
+  parameters = list(beta=coef(fit))
+  negll2 = MakeADFun(negll,parameters)
+
+  with(negll2, optim(par*1e2, fn, gr, method="BFGS"))
+  
+  with(negll2,
+       optim(par*2, fn, gr, method="BFGS")$value - nlminb(par*2, fn, gr, he)$objective)
 
 #+end_src

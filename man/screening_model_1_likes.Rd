@@ -10,7 +10,9 @@ screening_model_1_likes(
   scale1 = 1,
   shape2 = 1,
   scale2 = 1,
-  beta = 0.05
+  beta = 0.05,
+  tol = 1e-06,
+  simple = TRUE
 )
 }
 \arguments{
@@ -23,6 +25,10 @@ screening_model_1_likes(
 \item{scale2}{Weibull scale for clinical diagnosis}
 
 \item{beta}{false negative fraction for screening}
+
+\item{tol}{double for the numeric tolerance of the integration (default=1e-6)}
+
+\item{simple}{true whether to use the simple calculation for Z}
 
 \item{tj}{double vector of screening times}
 

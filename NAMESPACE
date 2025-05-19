@@ -2,3 +2,5 @@
 
 export(screening_model_1_likes)
 export(screening_model_1_predictions)
+importFrom(Rcpp,sourceCpp)
+useDynLib(screening)
