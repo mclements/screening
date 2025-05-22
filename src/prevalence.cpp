@@ -4,7 +4,7 @@
 
 using namespace boost::math::quadrature;
 
-//' Simple wrapper class around findInterval()
+// Simple wrapper class around findInterval()
 class FindInterval {
 public:
   std::vector<double> v;
@@ -47,7 +47,7 @@ public:
   }
 };
 
-//' Class for modelling an illness-death model (0=Healthy, 1=Illness, 2=OtherDeath, 3=CancerDeath)
+// Class for modelling an illness-death model (0=Healthy, 1=Illness, 2=OtherDeath, 3=CancerDeath)
 template<class T01, class T02, class T13_excess>
 class IllnessDeathModel1 {
 public:

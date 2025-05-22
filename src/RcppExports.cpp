@@ -12,20 +12,21 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // screening_model_1_predictions
-Rcpp::DataFrame screening_model_1_predictions(std::vector<double> t, std::vector<double> tj, double shape1, double scale1, double shape2, double scale2, double beta, double tol);
-RcppExport SEXP _screening_screening_model_1_predictions(SEXP tSEXP, SEXP tjSEXP, SEXP shape1SEXP, SEXP scale1SEXP, SEXP shape2SEXP, SEXP scale2SEXP, SEXP betaSEXP, SEXP tolSEXP) {
+Rcpp::DataFrame screening_model_1_predictions(std::vector<double> t, std::vector<double> ti, double shape1, double scale1, double shape2, double scale2, double beta, bool simple, double tol);
+RcppExport SEXP _screening_screening_model_1_predictions(SEXP tSEXP, SEXP tiSEXP, SEXP shape1SEXP, SEXP scale1SEXP, SEXP shape2SEXP, SEXP scale2SEXP, SEXP betaSEXP, SEXP simpleSEXP, SEXP tolSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::vector<double> >::type t(tSEXP);
-    Rcpp::traits::input_parameter< std::vector<double> >::type tj(tjSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type ti(tiSEXP);
     Rcpp::traits::input_parameter< double >::type shape1(shape1SEXP);
     Rcpp::traits::input_parameter< double >::type scale1(scale1SEXP);
     Rcpp::traits::input_parameter< double >::type shape2(shape2SEXP);
     Rcpp::traits::input_parameter< double >::type scale2(scale2SEXP);
     Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< bool >::type simple(simpleSEXP);
     Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
-    rcpp_result_gen = Rcpp::wrap(screening_model_1_predictions(t, tj, shape1, scale1, shape2, scale2, beta, tol));
+    rcpp_result_gen = Rcpp::wrap(screening_model_1_predictions(t, ti, shape1, scale1, shape2, scale2, beta, simple, tol));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -46,10 +47,95 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// screening_model_2_predictions
+Rcpp::DataFrame screening_model_2_predictions(std::vector<double> t, std::vector<double> ti, std::vector<double> yi, double shape1, double scale1, double shape2, double scale2, double beta0, double beta1, bool simple, double tol);
+RcppExport SEXP _screening_screening_model_2_predictions(SEXP tSEXP, SEXP tiSEXP, SEXP yiSEXP, SEXP shape1SEXP, SEXP scale1SEXP, SEXP shape2SEXP, SEXP scale2SEXP, SEXP beta0SEXP, SEXP beta1SEXP, SEXP simpleSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<double> >::type t(tSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type ti(tiSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type yi(yiSEXP);
+    Rcpp::traits::input_parameter< double >::type shape1(shape1SEXP);
+    Rcpp::traits::input_parameter< double >::type scale1(scale1SEXP);
+    Rcpp::traits::input_parameter< double >::type shape2(shape2SEXP);
+    Rcpp::traits::input_parameter< double >::type scale2(scale2SEXP);
+    Rcpp::traits::input_parameter< double >::type beta0(beta0SEXP);
+    Rcpp::traits::input_parameter< double >::type beta1(beta1SEXP);
+    Rcpp::traits::input_parameter< bool >::type simple(simpleSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(screening_model_2_predictions(t, ti, yi, shape1, scale1, shape2, scale2, beta0, beta1, simple, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
+// screening_model_2_likes
+std::vector<double> screening_model_2_likes(Rcpp::List inputs, double shape1, double scale1, double shape2, double scale2, double beta0, double beta1, double tol);
+RcppExport SEXP _screening_screening_model_2_likes(SEXP inputsSEXP, SEXP shape1SEXP, SEXP scale1SEXP, SEXP shape2SEXP, SEXP scale2SEXP, SEXP beta0SEXP, SEXP beta1SEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type inputs(inputsSEXP);
+    Rcpp::traits::input_parameter< double >::type shape1(shape1SEXP);
+    Rcpp::traits::input_parameter< double >::type scale1(scale1SEXP);
+    Rcpp::traits::input_parameter< double >::type shape2(shape2SEXP);
+    Rcpp::traits::input_parameter< double >::type scale2(scale2SEXP);
+    Rcpp::traits::input_parameter< double >::type beta0(beta0SEXP);
+    Rcpp::traits::input_parameter< double >::type beta1(beta1SEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(screening_model_2_likes(inputs, shape1, scale1, shape2, scale2, beta0, beta1, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
+// screening_model_3_predictions
+Rcpp::DataFrame screening_model_3_predictions(std::vector<double> t, std::vector<double> ti, std::vector<double> yi, std::vector<int> bxi, double shape1, double scale1, double shape2, double scale2, double beta0, double beta1, double PrFalseNegBx, bool simple, double tol);
+RcppExport SEXP _screening_screening_model_3_predictions(SEXP tSEXP, SEXP tiSEXP, SEXP yiSEXP, SEXP bxiSEXP, SEXP shape1SEXP, SEXP scale1SEXP, SEXP shape2SEXP, SEXP scale2SEXP, SEXP beta0SEXP, SEXP beta1SEXP, SEXP PrFalseNegBxSEXP, SEXP simpleSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<double> >::type t(tSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type ti(tiSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type yi(yiSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type bxi(bxiSEXP);
+    Rcpp::traits::input_parameter< double >::type shape1(shape1SEXP);
+    Rcpp::traits::input_parameter< double >::type scale1(scale1SEXP);
+    Rcpp::traits::input_parameter< double >::type shape2(shape2SEXP);
+    Rcpp::traits::input_parameter< double >::type scale2(scale2SEXP);
+    Rcpp::traits::input_parameter< double >::type beta0(beta0SEXP);
+    Rcpp::traits::input_parameter< double >::type beta1(beta1SEXP);
+    Rcpp::traits::input_parameter< double >::type PrFalseNegBx(PrFalseNegBxSEXP);
+    Rcpp::traits::input_parameter< bool >::type simple(simpleSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(screening_model_3_predictions(t, ti, yi, bxi, shape1, scale1, shape2, scale2, beta0, beta1, PrFalseNegBx, simple, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
+// screening_model_3_likes
+std::vector<double> screening_model_3_likes(Rcpp::List inputs, double shape1, double scale1, double shape2, double scale2, double beta0, double beta1, double PrFalseNegBx, double tol);
+RcppExport SEXP _screening_screening_model_3_likes(SEXP inputsSEXP, SEXP shape1SEXP, SEXP scale1SEXP, SEXP shape2SEXP, SEXP scale2SEXP, SEXP beta0SEXP, SEXP beta1SEXP, SEXP PrFalseNegBxSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type inputs(inputsSEXP);
+    Rcpp::traits::input_parameter< double >::type shape1(shape1SEXP);
+    Rcpp::traits::input_parameter< double >::type scale1(scale1SEXP);
+    Rcpp::traits::input_parameter< double >::type shape2(shape2SEXP);
+    Rcpp::traits::input_parameter< double >::type scale2(scale2SEXP);
+    Rcpp::traits::input_parameter< double >::type beta0(beta0SEXP);
+    Rcpp::traits::input_parameter< double >::type beta1(beta1SEXP);
+    Rcpp::traits::input_parameter< double >::type PrFalseNegBx(PrFalseNegBxSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(screening_model_3_likes(inputs, shape1, scale1, shape2, scale2, beta0, beta1, PrFalseNegBx, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_screening_screening_model_1_predictions", (DL_FUNC) &_screening_screening_model_1_predictions, 8},
+    {"_screening_screening_model_1_predictions", (DL_FUNC) &_screening_screening_model_1_predictions, 9},
     {"_screening_screening_model_1_likes", (DL_FUNC) &_screening_screening_model_1_likes, 7},
+    {"_screening_screening_model_2_predictions", (DL_FUNC) &_screening_screening_model_2_predictions, 11},
+    {"_screening_screening_model_2_likes", (DL_FUNC) &_screening_screening_model_2_likes, 8},
+    {"_screening_screening_model_3_predictions", (DL_FUNC) &_screening_screening_model_3_predictions, 13},
+    {"_screening_screening_model_3_likes", (DL_FUNC) &_screening_screening_model_3_likes, 9},
     {NULL, NULL, 0}
 };
 

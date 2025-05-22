@@ -7,11 +7,21 @@
   pred =
       screening_model_1_predictions(t=x, tj=numeric(), shape1=1.5, scale1=20,
                                     shape2=1.5, scale2=10, beta=0.4, simple=TRUE,
-                                    tol=1e-6)
+                                    tol=1e-8)
   pred_check =
       screening_model_1_predictions(t=x, tj=numeric(), shape1=1.5,
                                     scale1=20, shape2=1.5, scale2=10, beta=0.4,
-                                    simple=FALSE, tol=1e-6)
+                                    simple=FALSE, tol=1e-8)
+  with(pred_check, 1-(X+Y+Z)) |> range()
+
+  pred =
+      screening_model_1_predictions(t=x, tj=15, shape1=1.5, scale1=20,
+                                    shape2=1.5, scale2=10, beta=0.4, simple=TRUE,
+                                    tol=1e-8)
+  pred_check =
+      screening_model_1_predictions(t=x, tj=15, shape1=1.5,
+                                    scale1=20, shape2=1.5, scale2=10, beta=0.4,
+                                    simple=FALSE, tol=1e-8)
   with(pred_check, 1-(X+Y+Z)) |> range()
   
   par(mfrow=1:2)
