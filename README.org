@@ -2,33 +2,38 @@
 
 
 #+begin_src R :session *R:screening* :results output :exports both
+
   library(screening)
   x=seq(0,30,length=301)
   pred =
-      screening_model_1_predictions(t=x, tj=numeric(), shape1=1.5, scale1=20,
+      screening_model_1_predictions(t=x, ti=numeric(), shape1=1.5, scale1=20,
                                     shape2=1.5, scale2=10, beta=0.4, simple=TRUE,
                                     tol=1e-8)
   pred_check =
-      screening_model_1_predictions(t=x, tj=numeric(), shape1=1.5,
+      screening_model_1_predictions(t=x, ti=numeric(), shape1=1.5,
                                     scale1=20, shape2=1.5, scale2=10, beta=0.4,
                                     simple=FALSE, tol=1e-8)
   with(pred_check, 1-(X+Y+Z)) |> range()
 
   pred =
-      screening_model_1_predictions(t=x, tj=15, shape1=1.5, scale1=20,
+      screening_model_1_predictions(t=x, ti=15, shape1=1.5, scale1=20,
                                     shape2=1.5, scale2=10, beta=0.4, simple=TRUE,
                                     tol=1e-8)
   pred_check =
-      screening_model_1_predictions(t=x, tj=15, shape1=1.5,
-                                    scale1=20, shape2=1.5, scale2=10, beta=0.4,
+      screening_model_1_predictions(t=x, ti=15, shape1=1.5, scale1=20,
+                                    shape2=1.5, scale2=10, beta=0.4,
                                     simple=FALSE, tol=1e-8)
   with(pred_check, 1-(X+Y+Z)) |> range()
   
   par(mfrow=1:2)
+  pred =
+      screening_model_1_predictions(t=x, ti=numeric(), shape1=1.5, scale1=20,
+                                    shape2=1.5, scale2=10, beta=0.4, simple=TRUE,
+                                    tol=1e-8)
   with(pred,
        matplot(t,cbind(X,Y,Z),type="l", lty=1, main="No screening",
                xlab="Time", ylab="Proportion"))
-  screening_model_1_predictions(t=x, tj=c(10,15, 20, 25), shape1=1.5, shape2=1.5,
+  screening_model_1_predictions(t=x, ti=c(10,15, 20, 25), shape1=1.5, shape2=1.5,
                                 scale1=20, scale2=10, beta=0.4) |>
       with(matplot(t,cbind(X,Y,Z),type="l", lty=1, main="Screening",
                    xlab="Time", ylab="Proportion"))
@@ -38,19 +43,49 @@
   with(pred,
        matplot(t,cbind(X,Y,Z),type="l", lty=1, 
                xlab="Time", ylab="Proportion"))
-  screening_model_1_predictions(t=x, tj=c(10,15, 20, 25), shape1=1.5, shape2=1.5,
+  screening_model_1_predictions(t=x, ti=c(10,15, 20, 25), shape1=1.5, shape2=1.5,
                                 scale1=20, scale2=10, beta=0.4) |>
       with(matlines(t,cbind(X,Y,Z),type="l", lty=2, col=1:3))
   legend("topright",
          legend=c("X (unscreened)","Y (unscreened)","Z (unscreened)",
                   "X (screened)","Y (screened)","Z (screened)"),
          lty=rep(1:2,each=3), col=rep(1:3,l=6))
-
   
 #+end_src
 
 #+RESULTS:
 
+
+
+#+begin_src R :session *R:screening* :results output :exports both
+
+  library(screening)
+  x=seq(0,30,length=11)
+  pred =
+      screening_model_2_predictions(t=x, ti=numeric(), yi=numeric(), shape1=1.5, scale1=20,
+                                    shape2=1.5, scale2=10, simple=TRUE,
+                                    tol=1e-8)
+  pred_check =
+      screening_model_2_predictions(t=x, ti=numeric(), yi=numeric(), shape1=1.5,
+                                    scale1=20, shape2=1.5, scale2=10, 
+                                    simple=FALSE, tol=1e-8)
+  with(pred_check, 1-(X+Y+Z)) |> range()
+  with(pred_check, 1-(X+Y+Z))
+  range(pred-pred_check)
+
+  pred =
+      screening_model_2_predictions(t=x, ti=15, yi=3, shape1=1.5, scale1=20,
+                                    shape2=1.5, scale2=10, simple=TRUE,
+                                    tol=1e-8)
+  pred_check =
+      screening_model_2_predictions(t=x, ti=15, yi=3, shape1=1.5, scale1=20,
+                                    shape2=1.5, scale2=10, 
+                                    simple=FALSE, tol=1e-8)
+  with(pred_check, 1-(X+Y+Z)) |> range()
+  with(pred_check, 1-(X+Y+Z))
+  range(pred-pred_check)
+
+#+end_src
 
 #+begin_src R :session *R:screening* :results output :exports both
 

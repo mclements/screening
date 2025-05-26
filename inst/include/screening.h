@@ -68,9 +68,9 @@ namespace screening {
     virtual ~AbstractScreeningModel() { }
     //' Product of false negative test outcomes possibly followed by a true positive test at the end.
     //' If i=n=0 then trivially no tests. This implies that i=n will also lead to no tests.
-    virtual double prod_beta(size_t i, size_t n, bool detected = false) = 0;
-    //' Calculate likelihoods for different inputs
-    virtual std::vector<double> likes(Rcpp::List inputs) = 0;
+    virtual double prod_beta(size_t i, size_t j, bool detected = false) = 0;
+    //' Calculate likelihoods for different inputs (NB: Y(t-)=Y(t-eps))
+    virtual std::vector<double> likes(Rcpp::List inputs, double eps=1.0e-12) = 0;
     //' Set up tj and n for observation time t 
     void setup(double t) {
       size_t i;
@@ -79,7 +79,7 @@ namespace screening {
       for (i=0; i<fulln && ti[i]<t; i++) {
 	tj.push_back(ti[i]);
       }
-      offset = (i+1<fulln && ti[i]==t) ? 1 : 0;
+      offset = (i+1==fulln && ti[i+1]==t) ? 1 : 0;
       tj.push_back(t);
       n = tj.size()-2; // number of episodes (excluding the last episode if time equals t)
     }
@@ -107,7 +107,7 @@ namespace screening {
       if (reset) setup(t);
       double value = 0.0;
       for (size_t i=0; i<=n; i++) {
-	auto fn = [&](double x) { return f1(x)*f2(t-x)*prod_beta(i, n); };
+	auto fn = [&](double x) { return f1(x)*f2(t-x)*prod_beta(i, n+offset); };
 	value += gauss_kronrod<double, 15>::integrate(fn, tj[i], tj[i+1], 5, tol, &error);
       }
       return value;
@@ -118,8 +118,8 @@ namespace screening {
       if (reset) setup(t);
       double value = 0.0, error2;
       // cumulative incidence
-      for (size_t i=0; i<=n; i++) {
-	for (size_t j=i; j<=n; j++) {
+      for (size_t i=0; i<=n; i++) { // index for onset interval 
+	for (size_t j=i; j<=n; j++) { // index for clinical diagnosis
 	  auto fn = [&](double s) { 
 	    auto inner = [&](double u) { return f1(s)*prod_beta(i,j)*f2(u-s); };
 	    return gauss_kronrod<double, 15>::integrate(inner, std::max(s,tj[j]),
@@ -129,9 +129,9 @@ namespace screening {
 	}
       }
       // screen-detected
-      for (size_t i=0; i<n+offset; i++) {
-	for (size_t j=i; j<n+offset; j++) {
-	  auto fn = [&](double u) { return f1(u)*S2(tj[j+1]-u)*prod_beta(i,j,true); };
+      for (size_t i=0; i<=n; i++) { // i: index for onset interval
+	for (size_t j=i+1; j<=n+offset; j++) { // j: index for clinical diagnosis
+	  auto fn = [&](double u) { return f1(u)*S2(tj[j]-u)*prod_beta(i,j,true); };
 	  value += gauss_kronrod<double, 15>::integrate(fn, tj[i], tj[i+1], 5, tol, &error);
 	}
       }
@@ -170,12 +170,12 @@ namespace screening {
 		    double tol = 1e-6) :
       AbstractScreeningModel<T1,T2,T3,T4>(f1,S1,f2,S2, tol),
       beta(beta) { }
-    double prod_beta(size_t i, size_t n, bool detected = false) {
+    double prod_beta(size_t i, size_t j, bool detected = false) {
       double value = 1.0;
-      for (size_t j=i; j<n; j++) value *= (detected && j+1==n ? 1.0-beta : beta);
+      for (size_t k=i; k<j; k++) value *= (detected && k+1==j ? 1.0-beta : beta);
       return value;
     }
-    std::vector<double> likes(Rcpp::List inputs) {
+    std::vector<double> likes(Rcpp::List inputs, double eps=1.0e-12) {
       using Rcpp::as;
       std::vector<double> out(inputs.size());
       for (int i = 0; i < inputs.size(); i++) {
@@ -184,11 +184,13 @@ namespace screening {
 	int type = as<int>(input("type"));
 	this->update(as<std::vector<double>>(input("ti")));
 	// Calculate the likelihood contribution for this observation
+	// Special case: t==max(ti) => offset==1
 	if (type == 1) {  // No cancer detected: P_X(t) + P_Y(t)
 	  out[i] = this->X(t) + this->Y(t);
 	} 
 	else if (type == 2) {  // Screen-detected cancer: P_Y(t-) * (1 - beta)
-	  out[i] = this->Y(t) * (1 - beta);
+	  // Does this assume that t==max(ti)?
+	  out[i] = this->Y(t-eps) * (1 - beta);
 	} 
 	else if (type == 3) {  // Interval cancer: I(t)
 	  out[i] = this->I(t);
@@ -219,15 +221,18 @@ namespace screening {
       AbstractScreeningModel<T1,T2,T3,T4>::update(ti);
       this->yi=yi;
     }
-    double prod_beta(size_t i, size_t n, bool detected = false) {
+    double prod_beta(size_t i, size_t j, bool detected = false) {
       double value = 1.0;
-      for (size_t j=i; j<this->n; j++)
-	value *= (detected && j+1==this->n ? 1.0-PrFalseNeg(yi[j]) : PrFalseNeg(yi[j]));
+      // reminder: yi[k] is not zero-padded => represents a test at tj[k+1]==ti[k]
+      for (size_t k=i; k<j; k++) {
+	// Rcpp::Rcout << yi[k] << " " << PrFalseNeg(yi[k]) << "\n";
+	value *= (detected && k+1==j ? 1.0-PrFalseNeg(yi[k]) : PrFalseNeg(yi[k]));
+      }
       return value;
     }
     // Which test characteristic should be used if t==t_j?
     // Should this be a different input?
-    std::vector<double> likes(Rcpp::List inputs) {
+    std::vector<double> likes(Rcpp::List inputs, double eps = 1.0e-12) {
       using Rcpp::as;
       std::vector<double> out(inputs.size());
       for (int i = 0; i < inputs.size(); i++) {
@@ -241,7 +246,7 @@ namespace screening {
 	  out[i] = this->X(t) + this->Y(t);
 	} 
 	else if (type == 2) {  // Screen-detected cancer: P_Y(t-) * (1 - beta)
-	  out[i] = this->Y(t) * (1 - PrFalseNeg(yi[this->n-1])); // is this correct??
+	  out[i] = this->Y(t-eps) * (1 - PrFalseNeg(yi[this->n-1]));
 	} 
 	else if (type == 3) {  // Interval cancer: I(t)
 	  out[i] = this->I(t);
@@ -277,16 +282,18 @@ namespace screening {
       this->yi=yi;
       this->bxi=bxi;
     }
-    double prod_bx(size_t i, size_t n, bool detected = false) {
+    double prod_bx(size_t i, size_t j) {
       double value = 1.0;
-      for (size_t j=i; j<n; j++)
-	value *= (bxi[j]==0 ? PrNoBx(yi[j]) : (1.0-PrNoBx(yi[j])));
+      // reminder: yi[k] is not zero-padded => represents a test at tj[k+1]==ti[k]
+      for (size_t k=i; k<j; k++)
+	value *= (bxi[k]==0 ? PrNoBx(yi[k]) : (1.0-PrNoBx(yi[k])));
       return value;
     }
-    double prod_beta(size_t i, size_t n, bool detected = false) {
+    double prod_beta(size_t i, size_t j, bool detected = false) {
       double value = 1.0;
-      for (size_t j=i; j<n; j++)
-	value *= (bxi[j]==0 ? PrNoBx(yi[j]) : (1.0-PrNoBx(yi[j]))*(detected && j+1==n ? (1.0 - PrFalseNegBx) : PrFalseNegBx));
+      // reminder: yi[k] is not zero-padded => represents a test at tj[k+1]==ti[k]
+      for (size_t k=i; k<j; k++)
+	value *= (bxi[k]==0 ? PrNoBx(yi[k]) : (1.0-PrNoBx(yi[k]))*(detected && k+1==j ? (1.0 - PrFalseNegBx) : PrFalseNegBx));
       return value;
     }
     double like_neg_screening(double s, bool reset = true) {
@@ -302,26 +309,26 @@ namespace screening {
       }
       return value;
     }
-    double like_interval_cancer(double t, bool reset=true) {
-      using namespace boost::math::quadrature;
-      if (reset) this->setup(t);
-      double value = 0.0;
-      for (size_t i=0; i<=this->n; i++) {
-	auto fn = [&](double x) {
-	  return this->f1(x)*this->f2(t-x)*prod_bx(0,i)*prod_beta(i,this->n);
-	};
-	value += gauss_kronrod<double, 15>::integrate(fn, this->tj[i], this->tj[i+1], 5, this->tol, &this->error);
-      }
-      return value;
-    }
     double like_screen_detected_cancer(double t, bool reset=true) {
       using namespace boost::math::quadrature;
       if (reset) this->setup(t);
       double value = 0.0;
       for (size_t i=0; i<=this->n; i++) {
 	auto fn = [&](double x) {
-	  return this->f1(x)*this->f2(t-x)*prod_bx(0,i)*
+	  return this->f1(x)*this->S2(t-x)*prod_bx(0,i)*
 	    prod_beta(i,this->n+this->offset,true); 
+	};
+	value += gauss_kronrod<double, 15>::integrate(fn, this->tj[i], this->tj[i+1], 5, this->tol, &this->error);
+      }
+      return value;
+    }
+    double like_interval_cancer(double t, bool reset=true) {
+      using namespace boost::math::quadrature;
+      if (reset) this->setup(t);
+      double value = 0.0;
+      for (size_t i=0; i<=this->n; i++) {
+	auto fn = [&](double x) {
+	  return this->f1(x)*this->f2(t-x)*prod_bx(0,i)*prod_beta(i,this->n+offset);
 	};
 	value += gauss_kronrod<double, 15>::integrate(fn, this->tj[i], this->tj[i+1], 5, this->tol, &this->error);
       }
@@ -329,7 +336,7 @@ namespace screening {
     }
     // Which test characteristic should be used if t==t_j?
     // Should this be a different input?
-    std::vector<double> likes(Rcpp::List inputs) {
+    std::vector<double> likes(Rcpp::List inputs, double eps=1.0e-12) {
       using Rcpp::as;
       std::vector<double> out(inputs.size());
       for (int i = 0; i < inputs.size(); i++) {
