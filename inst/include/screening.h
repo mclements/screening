@@ -328,7 +328,7 @@ namespace screening {
       double value = 0.0;
       for (size_t i=0; i<=this->n; i++) {
 	auto fn = [&](double x) {
-	  return this->f1(x)*this->f2(t-x)*prod_bx(0,i)*prod_beta(i,this->n+offset);
+	  return this->f1(x)*this->f2(t-x)*prod_bx(0,i)*prod_beta(i,this->n+this->offset);
 	};
 	value += gauss_kronrod<double, 15>::integrate(fn, this->tj[i], this->tj[i+1], 5, this->tol, &this->error);
       }
